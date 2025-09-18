@@ -8,10 +8,12 @@ def get_transactions(start_date=None, end_date=None):
     # Configuração da conexão
     conn_str = (
         'DRIVER={ODBC Driver 18 for SQL Server};'
-        'SERVER=ARTENIOREIS;'   # Substitua pelo nome ou IP do seu servidor
-        'DATABASE=DMD;'   # Substitua pelo nome do seu banco
-        'UID=sa;'       # Substitua pelo usuário
-        'PWD=arte171721;' # Substitua pela senha
+        'SERVER=localhost;'   # Ajuste conforme sua instância
+        'DATABASE=DMD;'           # Substitua pelo nome do seu banco
+        'UID=sa;'                          # Usuário correto
+        'PWD=arte171721;'                    # Senha correta
+        'Encrypt=yes;'                     # Mantém criptografia
+        'TrustServerCertificate=yes;'      # Aceita certificado autoassinado
     )
 
     try:
@@ -22,15 +24,11 @@ def get_transactions(start_date=None, end_date=None):
         # Retorna um DataFrame vazio com coluna de erro para exibir na tela
         return pd.DataFrame({'erro': [f'Erro de conexão: {e}']})
 
-    # Defina a coluna de data correta do seu banco (ex: DataPedido, DataEmissao, etc.)
-    data_col = 'DataPedido'
-
-    # Consulta SQL com filtro de data no WHERE
-    consulta = f"""
+    # Consulta SQL corrigida conforme informado pelo usuário
+    consulta = """
     SELECT NFSIT.Codigo, NFSIT.Descricao
     FROM NFSIT
     INNER JOIN PRODU ON NFSIT.Codigo = PRODU.Cod_Produto
-    WHERE NFSIT.{data_col} >= '{start_date}' AND NFSIT.{data_col} <= '{end_date}'
     """
 
     try:
