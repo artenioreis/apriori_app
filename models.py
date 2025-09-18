@@ -7,11 +7,11 @@ import pyodbc
 def get_transactions(start_date=None, end_date=None):
     # Configuração da conexão
     conn_str = (
-        'DRIVER={ODBC Driver 17 for SQL Server};'
-        'SERVER=SEU_SERVIDOR;'   # Substitua pelo nome ou IP do seu servidor
-        'DATABASE=SEU_BANCO;'   # Substitua pelo nome do seu banco
-        'UID=SEU_USUARIO;'       # Substitua pelo usuário
-        'PWD=SUA_SENHA;'         # Substitua pela senha
+        'DRIVER={ODBC Driver 18 for SQL Server};'
+        'SERVER=ARTENIOREIS;'   # Substitua pelo nome ou IP do seu servidor
+        'DATABASE=DMD;'   # Substitua pelo nome do seu banco
+        'UID=sa;'       # Substitua pelo usuário
+        'PWD=arte171721;' # Substitua pela senha
     )
 
     try:

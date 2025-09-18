@@ -10,6 +10,10 @@ app = Flask(__name__)
 def index():
     mensagem_erro = None
     df = None
+    top_products_chart = None
+    confidence_lift_chart = None
+    kits = None
+    metrics = None
 
     if request.method == 'POST':
         data_inicio = request.form.get('data_inicio', '2007-02-01')
@@ -29,15 +33,23 @@ def index():
                 top_products_chart = plot_top_products(df)
                 confidence_lift_chart = plot_confidence_vs_lift(regras)
                 kits = suggest_kits(regras)
+                metrics = {
+                    'suporte': 0.05,
+                    'confianca': 0.6,  # exemplo, calcule a partir das regras se quiser
+                    'lift': 1.2         # exemplo, calcule a partir das regras se quiser
+                }
             except Exception as e:
                 mensagem_erro = f'Erro ao processar os dados: {e}'
                 df = None
 
-            return render_template('index.html', top_products_chart=top_products_chart,
-                                   confidence_lift_chart=confidence_lift_chart,
-                                   kits=kits, mensagem_erro=mensagem_erro)
-
-    return render_template('index.html', mensagem_erro=mensagem_erro)
+    return render_template(
+        'index.html',
+        mensagem_erro=mensagem_erro,
+        top_products_chart=top_products_chart,
+        confidence_lift_chart=confidence_lift_chart,
+        kits=kits,
+        metrics=metrics
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
