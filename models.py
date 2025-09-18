@@ -1,36 +1,47 @@
-import pyodbc
+# models.py
+
 import pandas as pd
-from config import DB_CONFIG
+import pyodbc
 
-def get_connection():
-    """Cria a conexão com o banco de dados SQL Server."""
-    conn_str = (
-        f"DRIVER={DB_CONFIG['driver']};"
-        f"SERVER={DB_CONFIG['server']};"
-        f"DATABASE={DB_CONFIG['database']};"
-        f"UID={DB_CONFIG['uid']};"
-        f"PWD={DB_CONFIG['pwd']}"
-    )
-    return pyodbc.connect(conn_str)
-
+# Função para obter transações do banco SQL Server
 def get_transactions(start_date=None, end_date=None):
-    """
-    Busca os dados de vendas no banco de dados.
-    - Se start_date e end_date forem fornecidos, filtra pelo intervalo de datas.
-    """
-    conn = get_connection()
-    query = """
-   SELECT Codigo, Descricao
-FROM NFSIT
-INNER JOIN PRODU
-ON Codigo = Cod_Produto
-    """
-    if start_date:
-        query += f" AND OrderDate >= '{start_date}'"
-    if end_date:
-        query += f" AND OrderDate <= '{end_date}'"
+    # Configuração da conexão
+    conn_str = (
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        'SERVER=SEU_SERVIDOR;'   # Substitua pelo nome ou IP do seu servidor
+        'DATABASE=SEU_BANCO;'   # Substitua pelo nome do seu banco
+        'UID=SEU_USUARIO;'       # Substitua pelo usuário
+        'PWD=SUA_SENHA;'         # Substitua pela senha
+    )
 
-    df = pd.read_sql(query, conn)
-    conn.close()
+    try:
+        connection = pyodbc.connect(conn_str)
+        print("✅ Conexão com o banco de dados estabelecida")
+    except Exception as e:
+        print("❌ Erro ao conectar ao banco:", e)
+        # Retorna um DataFrame vazio com coluna de erro para exibir na tela
+        return pd.DataFrame({'erro': [f'Erro de conexão: {e}']})
+
+    # Defina a coluna de data correta do seu banco (ex: DataPedido, DataEmissao, etc.)
+    data_col = 'DataPedido'
+
+    # Consulta SQL com filtro de data no WHERE
+    consulta = f"""
+    SELECT NFSIT.Codigo, NFSIT.Descricao
+    FROM NFSIT
+    INNER JOIN PRODU ON NFSIT.Codigo = PRODU.Cod_Produto
+    WHERE NFSIT.{data_col} >= '{start_date}' AND NFSIT.{data_col} <= '{end_date}'
+    """
+
+    try:
+        df = pd.read_sql(consulta, connection)
+        print(f"📊 {len(df)} linhas retornadas do banco")
+    except Exception as e:
+        print("❌ Erro ao executar a consulta SQL:", e)
+        df = pd.DataFrame({'erro': [f'Erro na consulta: {e}']})
+
+    finally:
+        connection.close()
+        print("🔒 Conexão com o banco fechada")
+
     return df
-
