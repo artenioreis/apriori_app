@@ -198,5 +198,6 @@ Este diretório contém versões compiladas dos arquivos Python (`.pyc`). O Pyth
 ## Contato
 
 Desenvolvido por: Artenio Resi
-Email:artnioreis@live.com
-www.linkedin.com/in/artenioreiss
+Email:artnioreis@live.com    
+
+         www.linkedin.com/in/artenioreiss
