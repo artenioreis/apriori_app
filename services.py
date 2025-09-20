@@ -7,51 +7,44 @@ import plotly.express as px
 
 # Remove acentos das colunas e strings
 def remove_accents(input_str):
+    # Normaliza a string para separar caracteres e acentos, depois remove os acentos.
     return ''.join(
         c for c in unicodedata.normalize('NFD', input_str)
         if unicodedata.category(c) != 'Mn'
     )
 
-# Prepara os dados para Apriori
+# Prepara os dados para o formato de cesta de compras exigido pelo Apriori.
 def prepare_data(df):
-    print("📊 Colunas originais:", df.columns.tolist())
-    df.columns = [remove_accents(col).lower().strip() for col in df.columns]
-    print("✅ Colunas após padronização:", df.columns.tolist())
+    # Cria uma tabela onde cada linha é uma transação (num_nota) e cada coluna é um produto.
+    # O valor 1 indica a presença do produto na transação.
+    basket = (df.groupby(['num_nota', 'descricao'])
+                .size().unstack(fill_value=0))
 
-    if 'codigo' in df.columns:
-        # Agrupa transações por código + descrição
-        basket = (df.groupby(['codigo', 'descricao'])['descricao']
-                    .count().unstack()
-                    .reset_index()
-                    .fillna(0))
-    else:
-        # Agrupa por descrição apenas
-        basket = (df.groupby(['descricao'])['descricao']
-                    .count()
-                    .reset_index()
-                    .fillna(0))
-    
-    # 🔹 TRANSFORMA EM BINÁRIO (0 ou 1) para o Apriori
+    # Garante que todos os valores sejam binários (0 ou 1).
     def encode_units(x):
         return 1 if x >= 1 else 0
 
-    basket_bin = basket.applymap(encode_units)
-    
+    basket_bin = basket.map(encode_units)
+
     print("✅ Basket transformado em binário para Apriori")
     return basket_bin
 
-
-# Executa Apriori com min_support como argumento
+# Executa o algoritmo Apriori para encontrar itemsets e regras de associação.
 def run_apriori(basket, min_support=0.05, metric='lift', min_threshold=1):
     print(f"▶ Rodando Apriori com min_support={min_support}, metric={metric}, min_threshold={min_threshold}")
     frequent_itemsets = apriori(basket, min_support=min_support, use_colnames=True)
     print(f"✅ {len(frequent_itemsets)} itemsets frequentes encontrados")
 
+    if frequent_itemsets.empty:
+        print("⚠️ Nenhum itemset frequente encontrado com o suporte mínimo fornecido.")
+        # Retorna DataFrames vazios para evitar erros posteriores.
+        return frequent_itemsets, pd.DataFrame(columns=['antecedents', 'consequents', 'support', 'confidence', 'lift'])
+
     rules = association_rules(frequent_itemsets, metric=metric, min_threshold=min_threshold)
     print(f"✅ {len(rules)} regras geradas")
     return frequent_itemsets, rules
 
-# Explica métricas usadas
+# Retorna um dicionário com as explicações das métricas do Apriori.
 def explain_metrics():
     return {
         "suporte": "Proporção de transações que contêm o item ou combinação de itens.",
@@ -59,7 +52,7 @@ def explain_metrics():
         "lift": "Mede a força da associação. Lift > 1 indica que a presença do antecedente aumenta a probabilidade do consequente."
     }
 
-# Gráfico dos produtos mais vendidos
+# Gera o gráfico de barras com os produtos mais vendidos.
 def plot_top_products(df, top_n=10):
     top_products = df['descricao'].value_counts().head(top_n).reset_index()
     top_products.columns = ['Produto', 'Quantidade']
@@ -75,19 +68,32 @@ def plot_top_products(df, top_n=10):
     fig.update_layout(xaxis_tickangle=-45)
     return fig.to_html(full_html=False)
 
-# Gráfico Confiança x Lift
+# Gera o gráfico de dispersão de Confiança vs. Lift.
 def plot_confidence_vs_lift(rules):
+    # --- CORREÇÃO DO ERRO 'frozenset is not JSON serializable' ---
+    # Cria uma cópia do DataFrame para não alterar o original.
+    rules_for_plot = rules.copy()
+    
+    # Converte as colunas 'antecedents' e 'consequents' de frozenset para uma string legível.
+    # Isso é necessário para que a biblioteca de gráficos (Plotly) possa exibir os dados no hover.
+    rules_for_plot['antecedents'] = rules_for_plot['antecedents'].apply(lambda x: ', '.join(list(x)))
+    rules_for_plot['consequents'] = rules_for_plot['consequents'].apply(lambda x: ', '.join(list(x)))
+
     fig = px.scatter(
-        rules,
+        rules_for_plot, # Usa o DataFrame com os dados convertidos.
         x='confidence',
         y='lift',
-        hover_data=['antecedents', 'consequents'],
+        hover_data=['antecedents', 'consequents'], # Agora os dados do hover são strings.
         title="Relação entre Confiança e Lift"
     )
     return fig.to_html(full_html=False)
 
-# Sugestão de kits com base nas regras
-def suggest_kits(rules, min_confidence=0.5):
-    kits = rules[rules['confidence'] >= min_confidence][['antecedents', 'consequents', 'confidence', 'lift']]
+# Formata as regras de associação para sugerir kits de produtos.
+def suggest_kits(rules):
+    kits = rules[['antecedents', 'consequents', 'confidence', 'lift']]
+    # Converte os frozensets para uma string mais amigável para exibição na tabela.
+    kits['antecedents'] = kits['antecedents'].apply(lambda x: ', '.join(list(x)))
+    kits['consequents'] = kits['consequents'].apply(lambda x: ', '.join(list(x)))
     kits = kits.sort_values(by='lift', ascending=False)
     return kits
+

@@ -104,3 +104,48 @@ footer {
     width: 100%;
     bottom: 0;
 }
+
+/* --- ESTILOS PARA A BARRA DE CARREGAMENTO --- */
+
+#loader-overlay {
+    /* Posição e tamanho */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* Cor e sobreposição */
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999; /* Garante que fique por cima de tudo */
+
+    /* Alinhamento do conteúdo interno */
+    display: flex; /* Usado para centrar o spinner */
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+
+    /* Inicia escondido - o JavaScript irá mostrar */
+    display: none; 
+}
+
+.loader-spinner {
+    border: 8px solid #f3f3f3; /* Círculo cinza claro */
+    border-top: 8px solid #3498db; /* Cor azul do spinner */
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite; /* Animação de rotação */
+    margin-bottom: 20px;
+}
+
+/* Animação Keyframes para a rotação do spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#loader-overlay p {
+    color: #f3f3f3;
+    font-size: 1.2em;
+}

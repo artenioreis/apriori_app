@@ -6,16 +6,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="p-4">
+    <!-- Overlay de Carregamento -->
+    <div id="loader-overlay">
+        <div class="loader-spinner"></div>
+        <p>A processar os dados... Por favor, aguarde.</p>
+    </div>
+
     <h1 class="mb-4">📊 Dashboard - Análise de Vendas</h1>
 
-    {% if mensagem_erro %}
-    <div class="alert alert-danger">
-        <strong>❌ Erro:</strong> {{ mensagem_erro }}
-    </div>
-    {% endif %}
-
-    <form method="POST" class="mb-4 p-3 border rounded bg-light">
-        <div class="row">
+    <!-- Formulário de Filtros com ID para o JavaScript -->
+    <form id="analysis-form" method="POST" class="mb-4 p-3 border rounded bg-light">
+        <div class="row align-items-end">
             <div class="col-md-3">
                 <label>📅 Data Inicial:</label>
                 <input type="date" class="form-control" name="start_date" value="{{ start_date or '' }}">
@@ -24,62 +25,85 @@
                 <label>📅 Data Final:</label>
                 <input type="date" class="form-control" name="end_date" value="{{ end_date or '' }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label>📊 Suporte Mínimo:</label>
-                <input type="number" class="form-control" name="min_support" value="{{ min_support }}" step="0.01" min="0" max="1">
+                <input type="number" class="form-control" name="min_support" value="{{ min_support }}" step="0.001" min="0" max="1">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label>✅ Confiança Mínima:</label>
                 <input type="number" class="form-control" name="min_confidence" value="{{ min_confidence }}" step="0.01" min="0" max="1">
             </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">🔄 Atualizar</button>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary mt-3">🔄 Atualizar</button>
     </form>
 
+    <!-- Mensagens de Erro ou Avisos -->
+    {% if mensagem_erro %}
+        <div class="alert alert-danger">{{ mensagem_erro }}</div>
+    {% endif %}
+
     {% if no_data %}
-    <div class="alert alert-warning">
-        ⚠️ Nenhum dado encontrado para o intervalo de datas selecionado.
-    </div>
-    {% elif not mensagem_erro %}
+        <div class="alert alert-warning">
+            ⚠️ Nenhum dado de venda encontrado para o intervalo de datas selecionado.
+        </div>
+    {% endif %}
+
+    <!-- --- LÓGICA DE EXIBIÇÃO AJUSTADA --- -->
+
+    <!-- Secção de Métricas (sempre visível se não houver erro) -->
+    {% if not no_data and not mensagem_erro %}
         <h3>📌 Conceitos</h3>
         <ul>
-            {% if metrics %}
             <li><strong>Suporte:</strong> {{ metrics.suporte }}</li>
             <li><strong>Confiança:</strong> {{ metrics.confianca }}</li>
             <li><strong>Lift:</strong> {{ metrics.lift }}</li>
-            {% endif %}
         </ul>
+    {% endif %}
 
-        {% if top_products_chart %}
+    <!-- Gráfico de Produtos Mais Vendidos -->
+    {% if top_products_chart %}
         <h3 class="mt-4">🏆 Produtos Mais Vendidos</h3>
         <div>{{ top_products_chart|safe }}</div>
-        {% endif %}
+    {% endif %}
 
-        {% if frequent_itemsets %}
+    <!-- Tabela de Itemsets Frequentes -->
+    {% if frequent_itemsets %}
         <h3 class="mt-4">📈 Itemsets Frequentes</h3>
         {{ frequent_itemsets|safe }}
-        {% endif %}
+    {% endif %}
 
-        {% if rules %}
+    <!-- Tabela de Regras de Associação -->
+    {% if rules %}
         <h3 class="mt-4">🔗 Regras de Associação</h3>
         {{ rules|safe }}
-        {% endif %}
-
-        {% if kit_suggestions %}
-        <h3 class="mt-4">💡 Sugestão de Kits</h3>
-        <div class="kit-suggestions">
-            <ul>
-                {% for kit in kit_suggestions %}
-                    <li>{{ kit }}</li>
-                {% endfor %}
-            </ul>
+    {% elif frequent_itemsets and not no_data %}
+        <!-- Mensagem especial se houver itemsets mas não regras -->
+        <div class="alert alert-info mt-4">
+            ℹ️ Foram encontrados padrões (itemsets), mas nenhum deles gerou regras de associação com os filtros atuais. 
+            <br><b>Sugestão:</b> Tente diminuir o valor da "Confiança Mínima" para ver se alguma regra aparece.
         </div>
-        {% endif %}
+    {% endif %}
 
-        {% if confidence_lift_chart %}
+    <!-- Tabela de Sugestão de Kits -->
+    {% if kit_suggestions %}
+        <h3 class="mt-4">💡 Sugestão de Kits</h3>
+        {{ kit_suggestions|safe }}
+    {% endif %}
+
+    <!-- Gráfico de Confiança x Lift -->
+    {% if confidence_lift_chart %}
         <h3 class="mt-4">📊 Confiança x Lift</h3>
         <div>{{ confidence_lift_chart|safe }}</div>
-        {% endif %}
     {% endif %}
+
+    <!-- Script para ativar o loader -->
+    <script>
+        document.getElementById('analysis-form').addEventListener('submit', function() {
+            document.getElementById('loader-overlay').style.display = 'flex';
+        });
+    </script>
 </body>
 </html>
+
