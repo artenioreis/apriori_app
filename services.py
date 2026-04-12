@@ -2,34 +2,45 @@
 
 import pandas as pd
 import unicodedata
+# --- INÍCIO DA OTIMIZAÇÃO DE MEMÓRIA ---
+# Importa o TransactionEncoder, que é a ferramenta correta para transformar os dados
+# de forma eficiente quando se tem muitas transações.
+from mlxtend.preprocessing import TransactionEncoder
+# --- FIM DA OTIMIZAÇÃO DE MEMÓRIA ---
 from mlxtend.frequent_patterns import apriori, association_rules
 import plotly.express as px
 
-# Remove acentos das colunas e strings
+# Função para remover acentos (não foi alterada)
 def remove_accents(input_str):
-    # Normaliza a string para separar caracteres e acentos, depois remove os acentos.
     return ''.join(
         c for c in unicodedata.normalize('NFD', input_str)
         if unicodedata.category(c) != 'Mn'
     )
 
-# Prepara os dados para o formato de cesta de compras exigido pelo Apriori.
+# --- INÍCIO DA OTIMIZAÇÃO DE MEMÓRIA ---
+# Prepara os dados para o formato de cesta de compras usando um método eficiente.
 def prepare_data(df):
-    # Cria uma tabela onde cada linha é uma transação (num_nota) e cada coluna é um produto.
-    # O valor 1 indica a presença do produto na transação.
-    basket = (df.groupby(['num_nota', 'descricao'])
-                .size().unstack(fill_value=0))
+    # 1. Agrupa os produtos por nota fiscal. Em vez de criar uma tabela gigante,
+    #    isto cria uma lista de listas, onde cada lista interna contém os produtos de uma única venda.
+    #    Ex: [['Pão', 'Manteiga'], ['Café', 'Açúcar'], ['Pão', 'Leite']]
+    print("Agrupando produtos por transação...")
+    transactions = df.groupby('num_nota')['descricao'].apply(list).tolist()
 
-    # Garante que todos os valores sejam binários (0 ou 1).
-    def encode_units(x):
-        return 1 if x >= 1 else 0
+    # 2. Usa o TransactionEncoder para transformar a lista de transações numa matriz binária.
+    #    Este método é otimizado e consome muito menos memória do que o .unstack().
+    print("Codificando transações para o formato binário...")
+    te = TransactionEncoder()
+    te_ary = te.fit(transactions).transform(transactions)
 
-    basket_bin = basket.map(encode_units)
+    # 3. Converte a matriz resultante de volta para um DataFrame do pandas.
+    basket_bin = pd.DataFrame(te_ary, columns=te.columns_)
 
-    print("✅ Basket transformado em binário para Apriori")
+    print("✅ Basket transformado em binário para Apriori (método otimizado)")
     return basket_bin
+# --- FIM DA OTIMIZAÇÃO DE MEMÓRIA ---
 
-# Executa o algoritmo Apriori para encontrar itemsets e regras de associação.
+
+# Executa o algoritmo Apriori (não foi alterado)
 def run_apriori(basket, min_support=0.05, metric='lift', min_threshold=1):
     print(f"▶ Rodando Apriori com min_support={min_support}, metric={metric}, min_threshold={min_threshold}")
     frequent_itemsets = apriori(basket, min_support=min_support, use_colnames=True)
@@ -37,14 +48,13 @@ def run_apriori(basket, min_support=0.05, metric='lift', min_threshold=1):
 
     if frequent_itemsets.empty:
         print("⚠️ Nenhum itemset frequente encontrado com o suporte mínimo fornecido.")
-        # Retorna DataFrames vazios para evitar erros posteriores.
         return frequent_itemsets, pd.DataFrame(columns=['antecedents', 'consequents', 'support', 'confidence', 'lift'])
 
     rules = association_rules(frequent_itemsets, metric=metric, min_threshold=min_threshold)
     print(f"✅ {len(rules)} regras geradas")
     return frequent_itemsets, rules
 
-# Retorna um dicionário com as explicações das métricas do Apriori.
+# Retorna explicações das métricas (não foi alterado)
 def explain_metrics():
     return {
         "suporte": "Proporção de transações que contêm o item ou combinação de itens.",
@@ -52,7 +62,7 @@ def explain_metrics():
         "lift": "Mede a força da associação. Lift > 1 indica que a presença do antecedente aumenta a probabilidade do consequente."
     }
 
-# Gera o gráfico de barras com os produtos mais vendidos.
+# Gera o gráfico dos produtos mais vendidos (não foi alterado)
 def plot_top_products(df, top_n=10):
     top_products = df['descricao'].value_counts().head(top_n).reset_index()
     top_products.columns = ['Produto', 'Quantidade']
@@ -68,30 +78,24 @@ def plot_top_products(df, top_n=10):
     fig.update_layout(xaxis_tickangle=-45)
     return fig.to_html(full_html=False)
 
-# Gera o gráfico de dispersão de Confiança vs. Lift.
+# Gera o gráfico de Confiança vs. Lift (não foi alterado)
 def plot_confidence_vs_lift(rules):
-    # --- CORREÇÃO DO ERRO 'frozenset is not JSON serializable' ---
-    # Cria uma cópia do DataFrame para não alterar o original.
     rules_for_plot = rules.copy()
-    
-    # Converte as colunas 'antecedents' e 'consequents' de frozenset para uma string legível.
-    # Isso é necessário para que a biblioteca de gráficos (Plotly) possa exibir os dados no hover.
     rules_for_plot['antecedents'] = rules_for_plot['antecedents'].apply(lambda x: ', '.join(list(x)))
     rules_for_plot['consequents'] = rules_for_plot['consequents'].apply(lambda x: ', '.join(list(x)))
 
     fig = px.scatter(
-        rules_for_plot, # Usa o DataFrame com os dados convertidos.
+        rules_for_plot,
         x='confidence',
         y='lift',
-        hover_data=['antecedents', 'consequents'], # Agora os dados do hover são strings.
+        hover_data=['antecedents', 'consequents'],
         title="Relação entre Confiança e Lift"
     )
     return fig.to_html(full_html=False)
 
-# Formata as regras de associação para sugerir kits de produtos.
+# Sugere kits de produtos (não foi alterado)
 def suggest_kits(rules):
     kits = rules[['antecedents', 'consequents', 'confidence', 'lift']]
-    # Converte os frozensets para uma string mais amigável para exibição na tabela.
     kits['antecedents'] = kits['antecedents'].apply(lambda x: ', '.join(list(x)))
     kits['consequents'] = kits['consequents'].apply(lambda x: ', '.join(list(x)))
     kits = kits.sort_values(by='lift', ascending=False)

@@ -2,18 +2,21 @@
 
 import pandas as pd
 import pyodbc
+from config import ACTIVE_ENV, DB_CONFIGS
 
 # Função para obter transações do banco SQL Server
 def get_transactions(start_date, end_date): # As datas agora são obrigatórias
-    # Configuração da conexão
+    # Configuração da conexão baseada no ambiente ativo
+    config = DB_CONFIGS[ACTIVE_ENV]
+    
     conn_str = (
-        'DRIVER={ODBC Driver 18 for SQL Server};'
-        'SERVER=localhost;'   # Ajuste conforme sua instância
-        'DATABASE=DMD;'           # Substitua pelo nome do seu banco
-        'UID=sa;'                          # Usuário correto
-        'PWD=arte171721;'                    # Senha correta
-        'Encrypt=yes;'                     # Mantém criptografia
-        'TrustServerCertificate=yes;'      # Aceita certificado autoassinado
+        f"DRIVER={config['driver']};"
+        f"SERVER={config['server']};"
+        f"DATABASE={config['database']};"
+        f"UID={config['uid']};"
+        f"PWD={config['pwd']};"
+        f"Encrypt={config['encrypt']};"
+        f"TrustServerCertificate={config['trust_server_certificate']};"
     )
 
     try:
